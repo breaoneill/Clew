@@ -1,0 +1,8 @@
+[project]
+name = "clew"
+version = "0.1.0"
+description = "Leave clues, not paperwork."
+requires-python = ">=3.11"
+
+[project.scripts]
+clew = "clew.cli:main"
