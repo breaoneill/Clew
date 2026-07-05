@@ -1,0 +1,17 @@
+stroke_width: 24
+
+long:
+  count: 3
+  length: 120
+  spacing: 28
+
+short:
+  length: 42
+  spacing: 24
+
+dots:
+  diameter: 24
+
+tail:
+  gap: 12
+  length: 72
