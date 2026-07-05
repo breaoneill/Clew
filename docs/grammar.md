@@ -2,9 +2,9 @@
 
 A work entry consists of:
 
-[Customer] [Category]
+[Subject] [Category]
 
-One or more description lines.
+Body - one or more description lines.
 
 Example:
 
