@@ -6,4 +6,6 @@ Capture work once.
 
 Generate reports later.
 
+Clew augments memory. It does not replace judgement.
+
 Markdown is forever.
