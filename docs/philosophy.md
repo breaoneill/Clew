@@ -127,7 +127,7 @@ Everything else is an extension of that goal.
 
 The human remains in control.
 
-Clew makes suggestions.
+Clew doesn't make suggestions.
 
 Clew reconstructs timelines.
 
