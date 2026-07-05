@@ -14,6 +14,14 @@ Timesheet
 Progress
 Summary
 
+## Boundary
+
+Clew describes work events.
+
+Clew does not decide what an organisation does with those events.
+
+Plugins consume Clew's structured output and generate reports, updates, exports or integrations.
+
 ## External Systems
 
 Clew may link to external systems such as Zammad, GitHub, email or Teams.
