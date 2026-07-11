@@ -13,3 +13,12 @@ class WorkEvent:
     subject: str
     category: str
     body: str
+
+
+@dataclass(frozen=True)
+class WeekNotes:
+    """A chronological collection of WorkEvents."""
+
+    start_date: date
+    end_date: date
+    events: list[WorkEvent]
