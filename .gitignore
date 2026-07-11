@@ -3,6 +3,8 @@ __pycache__/
 .venv/
 .vscode/
 .idea/
+*.egg-info/
+.pytest_cache/
 .DS_Store
 
 output/
