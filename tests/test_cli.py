@@ -8,40 +8,124 @@ from clew.cli import main
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def test_parse_defaults_to_human_readable_output(capsys: pytest.CaptureFixture[str]) -> None:
-    main(["parse", str(FIXTURES / "20260723.md")])
+def test_parse_has_exact_human_readable_output(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = main(["parse", str(FIXTURES / "20260725.md")])
 
     captured = capsys.readouterr()
-    assert "2026-07-23 | Widgets Inc | SUP" in captured.out
-    assert "Investigate SELinux log report error." in captured.out
-    assert "Source: 20260723.md:5" in captured.out
+    assert exit_code == 0
+    assert captured.out == (
+        "2026-07-25 | First | DEV\n"
+        "First description.\n"
+        "Source: 20260725.md:1-2\n"
+        "\n"
+        "2026-07-25 | Second | SUP\n"
+        "Second description.\n"
+        "Source: 20260725.md:3-4\n"
+    )
     assert captured.err == ""
 
 
-def test_parse_can_emit_json(capsys: pytest.CaptureFixture[str]) -> None:
-    main(["parse", str(FIXTURES / "20260723.md"), "--json"])
+def test_parse_emits_versioned_json_envelope(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = FIXTURES / "20260723.md"
+    exit_code = main(["parse", str(path), "--json"])
 
     captured = capsys.readouterr()
     result = json.loads(captured.out)
-    assert result[0] == {
-        "date": "2026-07-23",
-        "subject": "Widgets Inc",
-        "category": "SUP",
-        "description": "Investigate SELinux log report error.",
-        "source_filename": "20260723.md",
-        "source_line_number": 5,
+    assert exit_code == 0
+    assert result == {
+        "schema": "clew.work-events",
+        "version": 1,
+        "events": [
+            {
+                "date": "2026-07-23",
+                "subject": "Widgets Inc",
+                "category": "SUP",
+                "description": "Investigate SELinux log report error.",
+                "provenance": {
+                    "source_type": "markdown",
+                    "source_id": "20260723.md",
+                    "location": str(path),
+                    "span": {"start_line": 5, "end_line": 6},
+                },
+            },
+            {
+                "date": "2026-07-23",
+                "subject": "NWB",
+                "category": "DEV",
+                "description": (
+                    "Cloud server imaging.\nRecord the resulting image identifier."
+                ),
+                "provenance": {
+                    "source_type": "markdown",
+                    "source_id": "20260723.md",
+                    "location": str(path),
+                    "span": {"start_line": 8, "end_line": 10},
+                },
+            },
+        ],
     }
-    assert len(result) == 2
     assert captured.err == ""
 
 
-def test_parse_reports_malformed_entries(
+def test_zero_entries_has_explicit_output(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    with pytest.raises(SystemExit) as raised:
-        main(["parse", str(FIXTURES / "20260724.md")])
+    exit_code = main(["parse", str(FIXTURES / "20260728.md")])
 
     captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "No work events found.\n"
+    assert captured.err == ""
+
+
+@pytest.mark.parametrize(
+    "path_factory",
+    [
+        lambda root: root / "missing" / "20260803.md",
+        lambda root: root / "20260803.md",
+    ],
+)
+def test_file_failures_exit_one(
+    tmp_path: Path,
+    path_factory: object,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = path_factory(tmp_path)  # type: ignore[operator]
+    if path == tmp_path / "20260803.md":
+        path.mkdir()
+
+    exit_code = main(["parse", str(path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.out == ""
+    assert captured.err.startswith("clew: error:")
+
+
+def test_encoding_date_and_parse_failures_exit_one(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    invalid_encoding = tmp_path / "20260804.md"
+    invalid_encoding.write_bytes(b"\xff")
+    invalid_date = tmp_path / "notes.md"
+    invalid_date.write_text("", encoding="utf-8")
+
+    assert main(["parse", str(invalid_encoding), "--json"]) == 1
+    assert main(["parse", str(invalid_date)]) == 1
+    assert main(["parse", str(FIXTURES / "20260724.md")]) == 1
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.count("clew: error:") == 3
+
+
+def test_invalid_cli_usage_exits_two() -> None:
+    with pytest.raises(SystemExit) as raised:
+        main(["parse"])
+
     assert raised.value.code == 2
-    assert "20260724.md:1: malformed entry header" in captured.err
-    assert "20260724.md:4: entry requires at least one description line" in captured.err

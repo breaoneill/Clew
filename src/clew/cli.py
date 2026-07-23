@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
 import json
 from pathlib import Path
+import sys
 from typing import Sequence
 
-from clew.model import WorkEvent
+from clew.model import SourceProvenance, WorkEvent
+from clew.normalize import normalize_entries
 from clew.parser import ParseError, parse_day_note
+
+JSON_SCHEMA = "clew.work-events"
+JSON_VERSION = 1
 
 
 def _build_argument_parser() -> argparse.ArgumentParser:
@@ -24,45 +28,81 @@ def _build_argument_parser() -> argparse.ArgumentParser:
         "--json",
         action="store_true",
         dest="as_json",
-        help="write events as JSON",
+        help="write events using the versioned JSON contract",
     )
     return parser
 
 
-def _event_as_dict(event: WorkEvent) -> dict[str, object]:
-    data = asdict(event)
-    data["date"] = event.date.isoformat()
-    return data
+def _provenance_as_json(provenance: SourceProvenance) -> dict[str, object]:
+    span = provenance.span
+    return {
+        "source_type": provenance.source_type,
+        "source_id": provenance.source_id,
+        "location": provenance.location,
+        "span": (
+            None
+            if span is None
+            else {
+                "start_line": span.start_line,
+                "end_line": span.end_line,
+            }
+        ),
+    }
+
+
+def _event_as_json(event: WorkEvent) -> dict[str, object]:
+    """Serialize exactly the public JSON v1 event fields."""
+    return {
+        "date": event.date.isoformat(),
+        "subject": event.subject,
+        "category": event.category,
+        "description": event.description,
+        "provenance": _provenance_as_json(event.provenance),
+    }
+
+
+def _json_output(events: tuple[WorkEvent, ...]) -> str:
+    document = {
+        "schema": JSON_SCHEMA,
+        "version": JSON_VERSION,
+        "events": [_event_as_json(event) for event in events],
+    }
+    return json.dumps(document, indent=2, ensure_ascii=False)
 
 
 def _human_output(events: tuple[WorkEvent, ...]) -> str:
+    if not events:
+        return "No work events found."
+
     rendered: list[str] = []
     for event in events:
+        span = event.provenance.span
+        source = event.provenance.source_id
+        if span is not None:
+            source += f":{span.start_line}-{span.end_line}"
         rendered.append(
             "\n".join(
                 [
                     f"{event.date.isoformat()} | {event.subject} | {event.category}",
                     event.description,
-                    f"Source: {event.source_filename}:{event.source_line_number}",
+                    f"Source: {source}",
                 ]
             )
         )
     return "\n\n".join(rendered)
 
 
-def main(argv: Sequence[str] | None = None) -> None:
-    """Run the Clew command-line interface."""
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run Clew, returning 0 on success and 1 on input or parsing failure."""
     argument_parser = _build_argument_parser()
     arguments = argument_parser.parse_args(argv)
 
     try:
-        events = parse_day_note(arguments.path)
+        parsed_entries = parse_day_note(arguments.path)
+        events = normalize_entries(parsed_entries)
     except (OSError, UnicodeError, ParseError) as error:
-        argument_parser.error(str(error))
+        print(f"clew: error: {error}", file=sys.stderr)
+        return 1
 
-    if arguments.as_json:
-        print(json.dumps([_event_as_dict(event) for event in events], indent=2))
-    else:
-        output = _human_output(events)
-        if output:
-            print(output)
+    print(_json_output(events) if arguments.as_json else _human_output(events))
+    return 0

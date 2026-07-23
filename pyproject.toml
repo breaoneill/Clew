@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,11 +7,13 @@ name = "clew"
 version = "0.1.0"
 description = "Leave clues, not paperwork."
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 
 [project.optional-dependencies]
-test = ["pytest>=8"]
+test = ["pytest>=8,<10"]
+build = ["build>=1,<2"]
 
 [project.scripts]
 clew = "clew.cli:main"
