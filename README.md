@@ -32,6 +32,12 @@ To install the test dependencies as well:
 python -m pip install -e ".[test]"
 ```
 
+Install the static-analysis tools with:
+
+```console
+python -m pip install -e ".[test,quality]"
+```
+
 ## Day-note format
 
 A day-note filename must be a date in `YYYYMMDD.md` format. Each work entry has
@@ -57,11 +63,38 @@ Parse a day-note using the default human-readable output:
 clew parse 20260723.md
 ```
 
+Pass a directory to parse its dated day-notes as one chronological timeline:
+
+```console
+clew parse ./notes
+```
+
 Emit structured JSON instead:
 
 ```console
 clew parse 20260723.md --json
 ```
+
+Validate a day-note or week directory without exporting it:
+
+```console
+clew validate 20260723.md
+clew validate ./notes --json
+```
+
+Validation checks parsing and the core `DEV` and `SUP` categories. Reports are
+written to standard output; validation diagnostics are written to standard
+error.
+
+Export a day-note or directory as an NWS CSV timesheet:
+
+```console
+clew export nws ./notes
+clew export nws ./notes --output timesheet.csv
+```
+
+The CSV has stable `Date`, `Subject`, `Category`, and `Description` columns.
+Without `--output`, it is written to standard output.
 
 Successful commands exit with status 0. File, encoding, filename-date, and
 parse failures are written as human-readable errors to standard error and exit
@@ -109,5 +142,14 @@ intentional contract decision; breaking changes require a new version.
 Run the test suite from the repository root:
 
 ```console
+python -m pytest
+```
+
+Run the complete local quality gate with:
+
+```console
+ruff check .
+ruff format --check .
+mypy
 python -m pytest
 ```

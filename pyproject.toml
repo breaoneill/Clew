@@ -14,6 +14,11 @@ requires-python = ">=3.11"
 [project.optional-dependencies]
 test = ["pytest>=8,<10"]
 build = ["build>=1,<2"]
+quality = [
+    "mypy==2.3.0",
+    "pytest==9.1.1",
+    "ruff==0.16.0",
+]
 
 [project.scripts]
 clew = "clew.cli:main"
@@ -21,6 +26,25 @@ clew = "clew.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+clew = ["py.typed"]
+
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["B", "D", "E", "F", "I", "RUF", "SIM", "UP"]
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src", "tests", "tools"]

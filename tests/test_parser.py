@@ -7,7 +7,7 @@ import pytest
 from clew.model import SourceProvenance, SourceSpan, WorkEvent
 from clew.normalize import normalize_entries
 from clew.parsed import ParsedEntry
-from clew.parser import ParseError, parse_day_note
+from clew.parser import ParseError, parse_day_note, parse_week
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -113,9 +113,7 @@ def test_reports_empty_fields_and_malformed_headers_consistently() -> None:
         "entry subject must not be empty",
         "entry category must not be empty",
     ]
-    assert messages[2:] == [
-        "malformed entry header; expected [Subject] [Category]"
-    ] * 5
+    assert messages[2:] == ["malformed entry header; expected [Subject] [Category]"] * 5
 
 
 def test_missing_description_is_reported_for_consecutive_headers(
@@ -131,8 +129,7 @@ def test_missing_description_is_reported_for_consecutive_headers(
 def test_whitespace_rules(tmp_path: Path) -> None:
     note = tmp_path / "20260731.md"
     note.write_text(
-        "[ Widgets Inc ]\t [ SUP ]  \nDescription.\n"
-        "   [Not a header] [DEV]\n",
+        "[ Widgets Inc ]\t [ SUP ]  \nDescription.\n   [Not a header] [DEV]\n",
         encoding="utf-8",
     )
 
@@ -143,9 +140,7 @@ def test_whitespace_rules(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("filename", ["notes.md", "20260230.md"])
-def test_rejects_filename_without_a_valid_date(
-    tmp_path: Path, filename: str
-) -> None:
+def test_rejects_filename_without_a_valid_date(tmp_path: Path, filename: str) -> None:
     note = tmp_path / filename
     note.write_text("[Subject] [CAT]\nDescription.\n", encoding="utf-8")
 
@@ -155,9 +150,7 @@ def test_rejects_filename_without_a_valid_date(
 
 def test_handles_crlf_bom_and_missing_final_newline(tmp_path: Path) -> None:
     note = tmp_path / "20260801.md"
-    note.write_bytes(
-        b"\xef\xbb\xbf[Subject] [DEV]\r\nFirst line.\r\nSecond line."
-    )
+    note.write_bytes(b"\xef\xbb\xbf[Subject] [DEV]\r\nFirst line.\r\nSecond line.")
 
     entry = parse_day_note(note)[0]
     assert entry.description == "First line.\nSecond line."
@@ -170,6 +163,20 @@ def test_invalid_utf8_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(UnicodeDecodeError):
         parse_day_note(note)
+
+
+def test_parse_week_combines_dated_notes_in_chronological_order(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "20260804.md").write_text("[Later] [DEV]\nSecond.\n", encoding="utf-8")
+    (tmp_path / "20260803.md").write_text("[Earlier] [SUP]\nFirst.\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text(
+        "[Ignored] [DEV]\nNot a day-note.\n", encoding="utf-8"
+    )
+
+    entries = parse_week(tmp_path)
+
+    assert [entry.subject for entry in entries] == ["Earlier", "Later"]
 
 
 def test_parsed_and_normalized_models_are_immutable() -> None:

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Generate the official Clew logo.
+"""Generate the official Clew logo.
 
 Do not edit assets/clew.svg directly.
 Edit the LOGO_SPEC values below and regenerate instead.
@@ -8,13 +7,15 @@ Edit the LOGO_SPEC values below and regenerate instead.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
-import math
 
 
 @dataclass(frozen=True)
 class LogoSpec:
+    """Visual constants used to construct the canonical Clew logo."""
+
     canvas: int = 256
     stroke_width: int = 18
     colour: str = "#000000"
@@ -36,7 +37,13 @@ class LogoSpec:
 SPEC = LogoSpec()
 
 
-def rotate_point(x: float, y: float, angle_degrees: float, cx: float, cy: float) -> tuple[float, float]:
+def rotate_point(
+    x: float,
+    y: float,
+    angle_degrees: float,
+    cx: float,
+    cy: float,
+) -> tuple[float, float]:
     """Rotate a point around a centre."""
     angle = math.radians(angle_degrees)
     dx = x - cx
@@ -48,7 +55,12 @@ def rotate_point(x: float, y: float, angle_degrees: float, cx: float, cy: float)
     return cx + rx, cy + ry
 
 
-def line_segment(cx: float, cy: float, length: float, angle_degrees: float) -> tuple[float, float, float, float]:
+def line_segment(
+    cx: float,
+    cy: float,
+    length: float,
+    angle_degrees: float,
+) -> tuple[float, float, float, float]:
     """Return x1, y1, x2, y2 for a centred line segment."""
     half = length / 2
     x1, y1 = cx - half, cy
@@ -67,10 +79,14 @@ def path_line(x1: float, y1: float, x2: float, y2: float) -> str:
 
 def circle(cx: float, cy: float, r: float) -> str:
     """SVG circle."""
-    return f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="{SPEC.colour}" stroke="none" />'
+    return (
+        f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" '
+        f'fill="{SPEC.colour}" stroke="none" />'
+    )
 
 
 def build_svg(spec: LogoSpec) -> str:
+    """Build the complete SVG document for a logo specification."""
     angle = -45
     cx = cy = spec.canvas / 2
 
@@ -105,15 +121,15 @@ def build_svg(spec: LogoSpec) -> str:
 
     # Loose thread, deliberately separate from the weave
     elements.append(
-        '<path d="M190 160 '
-        'C215 185 198 211 174 215 '
-        'C155 218 151 238 166 244" />'
+        '<path d="M190 160 C215 185 198 211 174 215 C155 218 151 238 166 244" />'
     )
 
     body = "\n    ".join(elements)
 
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {spec.canvas} {spec.canvas}" role="img" aria-label="Clew logo">
-  <g fill="none" stroke="{spec.colour}" stroke-width="{spec.stroke_width}" stroke-linecap="round" stroke-linejoin="round">
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" \
+viewBox="0 0 {spec.canvas} {spec.canvas}" role="img" aria-label="Clew logo">
+  <g fill="none" stroke="{spec.colour}" stroke-width="{spec.stroke_width}" \
+stroke-linecap="round" stroke-linejoin="round">
     {body}
   </g>
 </svg>
@@ -121,6 +137,7 @@ def build_svg(spec: LogoSpec) -> str:
 
 
 def main() -> None:
+    """Regenerate the checked-in SVG asset from the logo specification."""
     repo_root = Path(__file__).resolve().parents[1]
     output = repo_root / "assets" / "clew.svg"
     output.parent.mkdir(parents=True, exist_ok=True)

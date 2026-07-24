@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-import re
 
 from clew.model import SourceProvenance, SourceSpan
 from clew.parsed import ParsedEntry
@@ -29,6 +29,7 @@ class ParseDiagnostic:
     message: str
 
     def __str__(self) -> str:
+        """Render the diagnostic with its source location."""
         location = self.source_id
         if self.line_number is not None:
             location += f":{self.line_number}"
@@ -39,6 +40,7 @@ class ParseError(ValueError):
     """One or more problems prevented a day-note from being parsed."""
 
     def __init__(self, diagnostics: list[ParseDiagnostic]) -> None:
+        """Initialize the error from one or more parser diagnostics."""
         self.diagnostics = tuple(diagnostics)
         super().__init__("\n".join(str(item) for item in self.diagnostics))
 
@@ -184,7 +186,9 @@ def parse_day_note(path: str | Path) -> tuple[ParsedEntry, ...]:
     for index, line in enumerate(lines):
         line_number = index + 1
         is_code = index in fenced_lines or _is_indented_code(line)
-        header = None if is_code or line[:1].isspace() else _ENTRY_HEADER.fullmatch(line)
+        header = (
+            None if is_code or line[:1].isspace() else _ENTRY_HEADER.fullmatch(line)
+        )
         entry_like = not is_code and not line[:1].isspace() and _is_entry_like(line)
 
         if header is not None or entry_like:
@@ -236,5 +240,33 @@ def parse_day_note(path: str | Path) -> tuple[ParsedEntry, ...]:
 
     if diagnostics:
         raise ParseError(diagnostics)
+
+    return tuple(entries)
+
+
+def day_note_paths(path: str | Path) -> tuple[Path, ...]:
+    """Return dated Markdown day-notes in chronological filename order."""
+    source = Path(path)
+    return tuple(
+        sorted(
+            candidate
+            for candidate in source.iterdir()
+            if candidate.is_file() and _DAY_NOTE_NAME.fullmatch(candidate.name)
+        )
+    )
+
+
+def parse_week(path: str | Path) -> tuple[ParsedEntry, ...]:
+    """Parse the dated Markdown day-notes in a directory as one timeline.
+
+    Files whose names do not use the ``YYYYMMDD.md`` day-note convention are
+    ignored. Day-notes and their entries are returned in chronological/source
+    order.
+    """
+    source = Path(path)
+    entries: list[ParsedEntry] = []
+
+    for day_note in day_note_paths(source):
+        entries.extend(parse_day_note(day_note))
 
     return tuple(entries)

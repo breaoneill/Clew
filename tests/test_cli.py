@@ -129,3 +129,48 @@ def test_invalid_cli_usage_exits_two() -> None:
         main(["parse"])
 
     assert raised.value.code == 2
+
+
+def test_parse_directory_uses_week_parser(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "20260803.md").write_text("[First] [DEV]\nMonday.\n", encoding="utf-8")
+    (tmp_path / "20260804.md").write_text(
+        "[Second] [SUP]\nTuesday.\n", encoding="utf-8"
+    )
+
+    assert main(["parse", str(tmp_path), "--json"]) == 0
+
+    result = json.loads(capsys.readouterr().out)
+    assert [event["date"] for event in result["events"]] == [
+        "2026-08-03",
+        "2026-08-04",
+    ]
+
+
+def test_nws_export_writes_csv_to_stdout(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    note = tmp_path / "20260803.md"
+    note.write_text("[Widgets] [DEV]\nBuilt exporter.\n", encoding="utf-8")
+
+    assert main(["export", "nws", str(note)]) == 0
+    captured = capsys.readouterr()
+    assert captured.out == (
+        "Date,Subject,Category,Description\n2026-08-03,Widgets,DEV,Built exporter.\n"
+    )
+    assert captured.err == ""
+
+
+def test_nws_export_can_write_a_file(tmp_path: Path) -> None:
+    note = tmp_path / "20260803.md"
+    note.write_text("[Widgets] [DEV]\nBuilt exporter.\n", encoding="utf-8")
+    destination = tmp_path / "timesheet.csv"
+
+    assert main(["export", "nws", str(note), "--output", str(destination)]) == 0
+
+    assert destination.read_text(encoding="utf-8") == (
+        "Date,Subject,Category,Description\n2026-08-03,Widgets,DEV,Built exporter.\n"
+    )

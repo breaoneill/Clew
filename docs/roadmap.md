@@ -17,7 +17,7 @@ Treat multiple DayNotes as a single timeline.
 ---
 
 ## v0.3 - First Real Plugin
-- [ ] Generate NWS timesheet
+- [x] Generate NWS timesheet
 
 Goal:
 Produce something that replaces a manual task in real life.
